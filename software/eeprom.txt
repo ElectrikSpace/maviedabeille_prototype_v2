@@ -1,0 +1,10 @@
+eeprom interne : uniquement pour les donnes internes de la base
+
+eeprom externe : toutes les donnees des capteurs 
+- bloc de 16 octets :
+	- 0 et 1 : id du capteur
+	- 2 : nombre d'alarmes
+	- 3 : activité
+	- 4 à 9 : alarme 1 (hh - mm - ss)
+	- 10 à 15 : alarme 2 (hh - mm - ss)
+
