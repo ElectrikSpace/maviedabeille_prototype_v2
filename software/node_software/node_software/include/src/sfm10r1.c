@@ -26,7 +26,7 @@ void sfm10r1_reset() {
 }
 
 void sfm10r1_init() {
-  /* init UART bus and hard reset sfm10r1 */
+  /* start UART bus and hard reset sfm10r1 */
   software_uart_init();
   sfm10r1_reset();
 }

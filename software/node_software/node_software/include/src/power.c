@@ -13,7 +13,7 @@ float power_get_battery_voltage() {
   /* return the voltage of the battery */
   float row_voltage;
 
-  // setup ADC
+  // setup and start ADC
   ADMUX = (1 << MUX2) | (1 << MUX1) | (1 << MUX0); // ADC7
   ADCSRA = (1 << ADEN) | (1 << ADPS2) | (1 << ADPS1);
   ADCSRB = 0;
@@ -35,7 +35,7 @@ float power_get_battery_voltage() {
 float power_get_solar_intensity() {
   /* return the voltage on luminosity pin */
 
-  // setup ADC
+  // setup and start ADC
   ADMUX = (1 << MUX2) | (1 << MUX1); // ADC6
   ADCSRA = (1 << ADEN) | (1 << ADPS2) | (1 << ADPS1);
   ADCSRB = 0;
@@ -73,7 +73,7 @@ void power_off_external_peripherals() {
 }
 
 void power_enable_wakeup_interrupt() {
-  /* set wake up pin as external wake up interrupt and enable gloab interrupts */
+  /* set wake up pin as external wake up interrupt and enable globale interrupts */
 
   // setup wake up pin as input
   DDRD = DDRC & ~(1 << PORTD2);
@@ -88,7 +88,7 @@ void power_enable_wakeup_interrupt() {
 }
 
 void power_disable_wakeup_interrupt() {
-  /* disable wake up pin as external wake up interrupt and disable global interrupt */
+  /* disable wake up pin as external wake up interrupt and disable global interrupts */
 
   // disable wake up pin interrupt
   EIMSK = EIMSK & ~(1 << 0);
@@ -144,4 +144,73 @@ void power_blink_state_led(uint16_t high_time, uint16_t low_time, uint32_t total
       }
     }
   }
+}
+
+uint8_t power_setup_clock() {
+	/* setup the desired clock system, return 1 if config is correct, 0 otherwise */
+	uint8_t prescaler_value;
+	uint8_t CLKPS;
+
+	// check if F_CPU is correct
+	if (USE_EXTERNAL_OSCILLATOR) {
+		if (EXTERNAL_OSCILLATOR_FREQUENCY < 1200000 || EXTERNAL_OSCILLATOR_FREQUENCY > 16000000) {
+			return 0;
+		}
+		if (F_CPU > EXTERNAL_OSCILLATOR_FREQUENCY) {
+			return 0;
+		}
+	}
+	else {
+		if (F_CPU < 1200000 || F_CPU > 8000000) {
+			return 0;
+		}
+	} 
+	
+	// calculate prescaler value
+	if (USE_EXTERNAL_OSCILLATOR) {
+		prescaler_value = EXTERNAL_OSCILLATOR_FREQUENCY / F_CPU;
+	}
+	else {
+		prescaler_value = 8000000 / F_CPU;
+	}
+	
+	// calculate CLKPS bits
+	if (prescaler_value == 1) {
+		CLKPS = 0x00;
+	}
+	else if (prescaler_value == 2) {
+		CLKPS = (1 << 0);
+	}
+	else if (prescaler_value <= 4) {
+		CLKPS = (1 << 1);
+	}
+	else if (prescaler_value <= 8) {
+		CLKPS = (1 << 0) | (1 << 1);
+	}
+	else { // never enter here
+		CLKPS = 0x00;
+	}
+	
+	// change clock
+	CLKPR = CLKPR | (1 << 7); // enable clock change
+	CLKPR = CLKPS | (1 << 7); // change prescaler
+	
+	_delay_us(1); // wait clock change is done (4 clock cycles min)
+
+	return 1;
+}
+
+
+uint8_t power_battery_startup_check() {
+	/* return 1 if battery level is correct, 0 otherwise */ 
+	
+	// get current battery level
+	float battery_level = power_get_battery_voltage();
+	
+	// check if battery level is correct
+	if (battery_level <= POWER_BATTERY_MIN_STARTUP) {
+		return 1;
+	}
+	
+	return 0;
 }

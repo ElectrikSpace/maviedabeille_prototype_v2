@@ -20,9 +20,9 @@
 /* only support one device per bus, multiple devices per bus is not implemented yet */
 /* alarm system is not implemented yet */
 
-extern uint8_t ds18b20_setup(uint8_t resolution);
+extern uint8_t ds18b20_setup(uint8_t binary_resolution);
 extern uint8_t ds18b20_start_conversion();
-extern uint8_t ds18b20_read_temperature(uint16_t *temperature);
-extern uint8_t ds18b20_get_temperature(uint16_t *temperature);
+extern uint8_t ds18b20_read_temperature(float *temperature);
+extern uint8_t ds18b20_get_temperature(float *temperature);
 
 #endif

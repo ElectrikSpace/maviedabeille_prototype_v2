@@ -19,12 +19,12 @@ extern uint8_t i2c_status_OK; // 1 if OK, 0 otherwise
 extern uint8_t i2c_data_size; // size of the message data
 extern uint8_t i2c_buffer[I2C_BUFFER_SIZE]; // initialize the buffer
 
-void i2c_init();
-void i2c_end();
-uint8_t i2c_is_transceiver_busy();
-uint8_t i2c_get_status();
-void i2c_start_write(uint8_t *data, uint8_t size);
-void i2c_resend_last_data();
-uint8_t i2c_read_buffer(uint8_t *data, uint8_t size);
+extern void i2c_init();
+extern void i2c_end();
+extern uint8_t i2c_is_transceiver_busy();
+extern uint8_t i2c_get_status();
+extern void i2c_start_write(uint8_t *data, uint8_t size);
+extern void i2c_resend_last_data();
+extern uint8_t i2c_read_buffer(uint8_t *data, uint8_t size);
 
 #endif
