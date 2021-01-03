@@ -10,7 +10,7 @@
 #include <string.h>
 
 void serial_init(uint32_t baud){
-	/* init UART bus*/
+	/* start UART bus*/
 	
 	// set UBBRn registers with baud rate
 	uint16_t value = F_CPU / (16*baud) - 1;
@@ -27,7 +27,7 @@ void serial_send(char *string) {
 	
 	// Wait for empty transmit buffer
 	int iterator = 0;
-	char current_char = 0;
+	char current_char;
 	do
 	{
 		current_char = string[iterator];

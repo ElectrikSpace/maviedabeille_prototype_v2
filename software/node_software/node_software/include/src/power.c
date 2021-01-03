@@ -12,6 +12,8 @@
 float power_get_battery_voltage() {
   /* return the voltage of the battery */
   float row_voltage;
+  float multiplier = ( (float) POWER_R30 + POWER_R31 ) / ( (float) POWER_R30 );
+  float adjusted_voltage;
 
   // setup and start ADC
   ADMUX = (1 << MUX2) | (1 << MUX1) | (1 << MUX0); // ADC7
@@ -24,16 +26,20 @@ float power_get_battery_voltage() {
   // wait until conversion is finished
   while( !(ADCSRA & (1 << ADIF)) );
 
+  // process result
+  row_voltage = (float) ((ADCL + ADCH*256)*POWER_VREF)/1024; // measured voltage
+  
+  adjusted_voltage = (float) row_voltage*multiplier; // adjusted voltage because of the voltage divider bridge
+  
   // disable ADC
   ADCSRA = ADCSRA & ~(1 << ADEN);
 
-  // process result
-  row_voltage = (float) ((ADCL + ADCH*256)*POWER_VREF)/1024; // measured voltage
-  return row_voltage / (float) (POWER_R30/(POWER_R30 + POWER_R31)); // adjusted voltage because of the voltage divider bridge
+  return adjusted_voltage;
 }
 
 float power_get_solar_intensity() {
   /* return the voltage on luminosity pin */
+  float raw_voltage;
 
   // setup and start ADC
   ADMUX = (1 << MUX2) | (1 << MUX1); // ADC6
@@ -46,11 +52,14 @@ float power_get_solar_intensity() {
   // wait until conversion is finished
   while( !(ADCSRA & (1 << ADIF)) );
 
+  // process result
+  raw_voltage = (float) ((ADCL + ADCH*256)*POWER_VREF)/1024;
+
   // disable ADC
   ADCSRA = ADCSRA & ~(1 << ADEN);
 
-  // process result
-  return (float) ((ADCL + ADCH*256)*POWER_VREF)/1024;
+  // return result
+  return raw_voltage;
 }
 
 void power_on_external_peripherals() {
@@ -70,10 +79,13 @@ void power_off_external_peripherals() {
   // put external peripherals voltage regulator signal to HIGH (PC0)
   DDRC = DDRC & ~(1 << DDC0);
   PORTC = PORTC & ~(1 << PORTC0);
+  
+  // release led pin
+  POWER_STATE_LED_PORT = POWER_STATE_LED_PORT & ~(1 << POWER_STATE_LED_BIT);
 }
 
 void power_enable_wakeup_interrupt() {
-  /* set wake up pin as external wake up interrupt and enable globale interrupts */
+  /* set wake up pin as external wake up interrupt and enable global interrupts */
 
   // setup wake up pin as input
   DDRD = DDRC & ~(1 << PORTD2);
@@ -126,7 +138,7 @@ void power_blink_state_led(uint16_t high_time, uint16_t low_time, uint32_t total
     if (state) {
       state = 0;
       time = time + low_time;
-      POWER_STATE_LED_PORT = POWER_STATE_LED_PORT & ~(1 << POWER_STATE_LED_BIT);
+	  POWER_STATE_LED_PORT = POWER_STATE_LED_PORT | (1 << POWER_STATE_LED_BIT);
       delay_time = 0;
       while (delay_time < low_time) {
         _delay_ms(1);
@@ -136,7 +148,7 @@ void power_blink_state_led(uint16_t high_time, uint16_t low_time, uint32_t total
     else {
       state = 1;
       time = time + high_time;
-      POWER_STATE_LED_PORT = POWER_STATE_LED_PORT | (1 << POWER_STATE_LED_BIT);
+      POWER_STATE_LED_PORT = POWER_STATE_LED_PORT & ~(1 << POWER_STATE_LED_BIT);
       delay_time = 0;
       while (delay_time < high_time) {
           _delay_ms(1);
@@ -144,6 +156,7 @@ void power_blink_state_led(uint16_t high_time, uint16_t low_time, uint32_t total
       }
     }
   }
+  POWER_STATE_LED_PORT = POWER_STATE_LED_PORT | (1 << POWER_STATE_LED_BIT);
 }
 
 uint8_t power_setup_clock() {
@@ -208,7 +221,7 @@ uint8_t power_battery_startup_check() {
 	float battery_level = power_get_battery_voltage();
 	
 	// check if battery level is correct
-	if (battery_level <= POWER_BATTERY_MIN_STARTUP) {
+	if (battery_level >= POWER_BATTERY_MIN_STARTUP) {
 		return 1;
 	}
 	

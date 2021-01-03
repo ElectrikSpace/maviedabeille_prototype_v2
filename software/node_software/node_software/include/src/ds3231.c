@@ -11,7 +11,7 @@
 
 uint8_t ds3231_write_register(uint8_t register_address, uint8_t byte) {
 	/* write 1 register in ds3231 register located by the address */
-	uint8_t data[3] = {((DS3231_ADDRESS << 1) | 0x01), register_address, byte};
+	uint8_t data[3] = {(DS3231_ADDRESS << 1), register_address, byte};
 	i2c_start_write(data, 3); // write byte
 	return i2c_get_status();
 }
@@ -20,14 +20,20 @@ uint8_t ds3231_read_register(uint8_t register_address, uint8_t *value) {
 	/* read 1 register from ds3231 and put the content in buffer */
 
 	// set the ds3231 register pointer to the right address
-	uint8_t data[2] = {(DS3231_ADDRESS << 1), register_address}; // adress+w, control register pointer adress
-	i2c_start_write(data, 2); // set ds3231 register pointer to control register
+	uint8_t data[2] = {(DS3231_ADDRESS << 1), register_address}; // address+w, control register pointer address
+	i2c_start_write(data, 2); // set ds3231 register pointer to the correct address
 
 	if (i2c_get_status()) {
 		// read bytes
 		data[0] = (DS3231_ADDRESS << 1) | 0x01;
 		i2c_start_write(data, 2); // read one byte
-		return i2c_get_status();
+		if (i2c_get_status() && i2c_read_buffer(data, 2)) {
+			*value = data[1];
+			return 1;
+		}
+		else {
+			return 0;
+		}
 	}
 	else {
 		return 0;
@@ -99,7 +105,7 @@ uint8_t ds3231_disable_alarm(uint8_t alarm) {
 
 uint8_t ds3231_reset() {
   /* enable oscillator, disable alarms and interrupt pin */
-  uint8_t data[3] = {(DS3231_ADDRESS << 1), 0x0e, 0x00}; // adress+w, control register pointer adress, new control register value
+  uint8_t data[3] = {(DS3231_ADDRESS << 1), 0x0e, 0x00}; // address+w, control register pointer address, new control register value
   i2c_start_write(data, 3);
   _delay_ms(250); // complete reset time
   return i2c_get_status();

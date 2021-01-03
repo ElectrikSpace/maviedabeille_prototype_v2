@@ -5,7 +5,7 @@
 *  Author: sylvain
 */
 
-/* up to 19200 Baud, 8 bit data wthout parity bit */
+/* up to 19200 Baud, 8 bit data without parity bit */
 
 #ifndef SOFTWARE_UART_H_
 #define SOFTWARE_UART_H_
@@ -24,7 +24,7 @@
 
 #define SOFTWARE_UART_BAUD_RATE 9600
 
-#define SOFTWARE_UART_BIT_TIME_TO_TICK_DIVIDER 20
+#define SOFTWARE_UART_BIT_TIME_TO_TICK_DIVIDER 6
 
 #include "software_uart.c"
 

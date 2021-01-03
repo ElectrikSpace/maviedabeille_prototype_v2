@@ -11,7 +11,7 @@
 #define I2C_FREQUENCY_REGISTER 0x20         // TWI Bit rate Register setting
 // here for 100kHz clock speed
 
-#define I2C_BUFFER_SIZE 10 // max number of bytes in the buffer
+#define I2C_BUFFER_SIZE 20 // max number of bytes in the buffer
 
 #include "i2c_master.c"
 

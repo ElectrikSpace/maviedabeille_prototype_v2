@@ -15,7 +15,7 @@ uint8_t i2c_buffer[I2C_BUFFER_SIZE]; // initialize the buffer
 void i2c_init() {
 	/* initialize i2c transceiver */
   TWBR = I2C_FREQUENCY_REGISTER;                    // Set bit rate register (Baud rate). Defined in header file
-  TWSR = TWSR & ( (0<<TWPS1)|(0<<TWPS0) );			// set prescale to 1
+  TWSR = TWSR & ( (0<<TWPS1)|(0<<TWPS0) );			// set prescaler to 1
   TWDR = 0xFF;                                      // Default content = SDA released
   TWCR = (1<<TWEN)|                                 // Enable TWI-interface and release TWI pins
          (0<<TWIE)|(0<<TWINT)|                      // Disable Interrupt
@@ -110,7 +110,7 @@ ISR(TWI_vect) {
 	/* TWI interrupt sub routine */
 	static uint8_t i2c_buffer_pointer;
 
-	switch (TWSR & ( !(0<<TWPS1)|(0<<TWPS0) ) ) // i2c master status code
+	switch (TWSR & ~((1<<TWPS0)|(1<<TWPS1))) // i2c master status code
 	{
 		// keep in mind the behavior of a switch statement without break at some points
 		// take a look at the i2c status codes

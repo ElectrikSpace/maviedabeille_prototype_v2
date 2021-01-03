@@ -15,19 +15,26 @@ void sfm10r1_reset() {
 
 	// reset signal must be high for at least 600us
 	SFM10R1_RESET_PORT = SFM10R1_RESET_PORT | (1 << SFM10R1_RESET_PORT_BIT);
-	_delay_ms(1);
+	_delay_us(600);
 
 	// reset for at least 1us
 	SFM10R1_RESET_PORT = SFM10R1_RESET_PORT & ~(1 << SFM10R1_RESET_PORT_BIT);
-	_delay_us(10);
+	_delay_us(1);
 
 	// set reset signal to high
 	SFM10R1_RESET_PORT = SFM10R1_RESET_PORT | (1 << SFM10R1_RESET_PORT_BIT);
+	
+	// release reset pin
+	SFM10R1_RESET_DDR = SFM10R1_RESET_DDR & ~(1 << SFM10R1_RESET_DDR_BIT);
 }
 
 void sfm10r1_init() {
   /* start UART bus and hard reset sfm10r1 */
+  
+  // start UART bus
   software_uart_init();
+  
+  // hard reset SFM10R1
   sfm10r1_reset();
 }
 
@@ -107,7 +114,7 @@ uint8_t sfm10r1_get_PAC(uint8_t *pac) {
 uint8_t sfm10r1_send_data(char *data, uint8_t size) {
  /* return 1 if success, send data (1-12 bytes) and wait for OK, so it can take several seconds */
  uint8_t iterator;
- char buffer[20] = {'A', 'T', '$', 'S', 'F', '='};
+ char buffer[32] = {'A', 'T', '$', 'S', 'F', '='};
 
  // copy data in buffer
  for (iterator = 0; iterator < size; iterator++) {
@@ -119,7 +126,7 @@ uint8_t sfm10r1_send_data(char *data, uint8_t size) {
  software_uart_write_bytes(buffer, iterator+7);
 
  // read answer
- if (!software_uart_read_bytes(buffer, 4, 10000)) {
+ if (!software_uart_read_bytes(buffer, 4, 15000)) {
    return 0;
  }
 
@@ -127,6 +134,7 @@ uint8_t sfm10r1_send_data(char *data, uint8_t size) {
  if (buffer[0] == 'O' && buffer[1] == 'K') {
    return 1;
  }
+ // error
  return 0;
 }
 
@@ -205,7 +213,7 @@ uint8_t sfm10r1_get_transmit_repeats(uint8_t *repeats) {
   software_uart_write_bytes(buffer, 7);
 
   // read answer
-  if (!software_uart_read_bytes(buffer, 3, SFM10R1_UART_TIMEOUT)) {
+  if (!software_uart_read_bytes(buffer, 1, SFM10R1_UART_TIMEOUT)) {
     return 0;
   }
 
@@ -216,8 +224,22 @@ uint8_t sfm10r1_get_transmit_repeats(uint8_t *repeats) {
 }
 
 uint8_t sfm10r1_set_transmit_repeats(uint8_t number) {
-  /* return 1 if success, set transmit repeats value (1-3) */
-  char buffer[8] = {'A', 'T', '$', 'T', 'R', '=', (char) number, '\r'};
+  /* return 1 if success, set transmit repeats value (0-2) */
+  char buffer[8] = {'A', 'T', '$', 'T', 'R', '=', 0x00, '\r'};
+
+  // set the repeat number is the buffer
+  if (number == 0) {
+	  buffer[6] = '0';
+  } 
+  else if (number == 1) {
+	  buffer[6] = '1';
+  }
+  else if (number == 2) {
+	  buffer[6] = '2';
+  }
+  else {
+	  return 0;
+  }
 
   // send request
   software_uart_write_bytes(buffer, 8);
@@ -227,7 +249,7 @@ uint8_t sfm10r1_set_transmit_repeats(uint8_t number) {
     return 0;
   }
   else {
-    if (buffer[0] == 'O' && buffer[1] == '1') {
+    if (buffer[0] == 'O' && buffer[1] == 'K') {
       return 1;
     }
   }
