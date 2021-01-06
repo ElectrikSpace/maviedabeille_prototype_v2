@@ -14,10 +14,12 @@
 #include <util/delay.h>
 #include <string.h>
 
+// for debug purpose only
+#include "simple_uart.h"
+
 #include "power.h"
 #include "hx711.h"
 #include "onewire.h"
-#include "simple_uart.h"
 #include "i2c_master.h"
 #include "ds3231.h"
 #include "ds18b20.h"
@@ -29,10 +31,12 @@
 /*#include "spi_master.h"
 #include "at24c32.h"*/
 
+// for debug purpose only
 void serial_test(char test) {
 	/* test function only for debug purpose */
 	char data[4] = {test, '\r', '\n', '\0'};
 	serial_send(data);
+	_delay_ms(10);
 }
 
 ISR (INT0_vect) // wake up interrupt
@@ -65,7 +69,7 @@ void enter_error_state(uint8_t state) {
 
 	// error during the test cycle
 	else if (state == 2) {
-		power_blink_state_led(1000, 1000, 60000);
+		power_blink_state_led(1000, 200, 60000);
 		power_off_external_peripherals();
 		enter_sleep();
 	}
@@ -144,6 +148,9 @@ void init() {
 	if (!sfm10r1_set_transmit_repeats(SIGFOX_TRANSMIT_REPEATS)) {
 		enter_error_state(1);
 	}
+	if (!sfm10r1_save_config()) {
+		enter_error_state(1);
+	}
 	sfm10r1_end(); // stop communication
 
 	// power off state led, launch sequence is finished
@@ -160,12 +167,12 @@ void measure_cycle(uint8_t is_test_cycle) {
 	uint8_t battery_voltage_processed[2];
 	float solar_intensity;
 	uint8_t solar_intensity_processed;
-	uint32_t raw_weight;
+	uint8_t raw_weight[3];
 	float sht_humidity;
 	uint8_t sht_humidity_processed;
 	float sht_temperature;
 	uint8_t sht_temperature_processed[2];
-	float ds18b20_temperature;
+	float ds18b20_temperature = 101.0;
 	uint8_t ds18b20_temperature_processed[2];
 	float sfm10r1_temperature;
 	uint8_t sfm10r1_temperature_processed[2];
@@ -182,17 +189,21 @@ void measure_cycle(uint8_t is_test_cycle) {
 
 	// solar intensity
 	solar_intensity = power_get_solar_intensity();
-
+ 
 	// raw weight
-	HX711_init(); // init hx711 chip
-	while(!HX711_is_ready()); // wait until the chip is ready
-	raw_weight = HX711_multiple_conversion_average(0, 10); // average of 10 conversions using channel A with gain = 128
-
+	hx711_init(); // init hx711 chip
+	if (!hx711_multiple_conversion_average(0, 10, raw_weight)) { // average of 10 conversions using channel A with gain = 128
+		raw_weight[0] = 0x00;
+		raw_weight[0] = 0x00;
+		raw_weight[0] = 0x00;
+	}
+	hx711_end();
+	
 	// SHT3x humidity and temperature
 	i2c_init();
 	_delay_ms(1); // wait until the chip is ready
 	sht3x_reset(); // reset the chip
-	if (!sht3x_get_measurement(0x03, &sht_humidity, &sht_temperature)) { // collect temperature and humidity
+	if (!sht3x_get_measurement(0x03, &sht_temperature, &sht_humidity)) { // collect temperature and humidity
 		// server backend will detect a failure if temperature and humidity have unbelievable values
 		sht_humidity = 101;
 		sht_temperature = 101;
@@ -204,6 +215,8 @@ void measure_cycle(uint8_t is_test_cycle) {
 		if (!ds18b20_get_temperature(&ds18b20_temperature)) { // collect the temperature
 			// server backend will detect a failure if temperature has an unbelievable value
 			ds18b20_temperature = 101;
+		}
+		else {
 		}
 	}
 	else {
@@ -228,27 +241,27 @@ void measure_cycle(uint8_t is_test_cycle) {
 	if (!sfm10r1_get_temperature(&sfm10r1_temperature)) {
 		sfm10r1_temperature = 101;
 	}
-
+	
 	/* process data */
 	// put a 100°C offset for each temperature value
 	// and put data into a 12 bits format for each temperature value
 	sht_temperature = sht_temperature + 100;
 	sht_temperature_processed[0] = (uint8_t) (int) sht_temperature;
-	sht_temperature = sht_temperature - (float) sht_temperature_processed[0];
-	sht_temperature_processed[1] = (uint8_t) ((int) ((float) 1000)*sht_temperature) / 625;
-
+	sht_temperature = 100*(sht_temperature - (float) sht_temperature_processed[0]);
+	sht_temperature_processed[1] = 0x03 & ((uint8_t) ((int) sht_temperature / 25));
+	
 	ds18b20_temperature = ds18b20_temperature + 100;
 	ds18b20_temperature_processed[0] = (uint8_t) (int) ds18b20_temperature;
-	ds18b20_temperature = ds18b20_temperature - (float) ds18b20_temperature_processed[0];
-	ds18b20_temperature_processed[1] = (uint8_t) ((int) ((float) 1000)*ds18b20_temperature) / 625;
+	ds18b20_temperature = 100*(ds18b20_temperature - (float) ds18b20_temperature_processed[0]);
+	ds18b20_temperature_processed[1] = 0x03 & ((uint8_t) ((int) ds18b20_temperature / 25));
 
 	sfm10r1_temperature = sfm10r1_temperature + 100;
 	sfm10r1_temperature_processed[0] = (uint8_t) (int) sfm10r1_temperature;
-	sfm10r1_temperature = sfm10r1_temperature - (float) sfm10r1_temperature_processed[0];
-	sfm10r1_temperature_processed[1] = (uint8_t) ((int) ((float) 1000)*sfm10r1_temperature) / 625;
-
+	sfm10r1_temperature = 100*(sfm10r1_temperature - (float) sfm10r1_temperature_processed[0]);
+	sfm10r1_temperature_processed[1] = 0x03 & ((uint8_t) ((int) sfm10r1_temperature / 25));
+	
 	// humidity is int between 0 and 99
-	sht_humidity_processed = (uint8_t) (int) sht_humidity;
+	sht_humidity_processed = (uint8_t) sht_humidity;
 
 	// battery voltage
 	if (battery_voltage < 2.5) {
@@ -270,15 +283,15 @@ void measure_cycle(uint8_t is_test_cycle) {
 	message[0] = 0x01; // header code for this kind of message
 	message[1] = battery_voltage_processed[0]; // battery voltage
 	message[2] = (battery_voltage_processed[1] << 6) | solar_intensity_processed; // battery voltage + solar  intensity
-	for (counter = 3; counter < 7; counter++) { // weight
-		message[counter] = (uint8_t) raw_weight;
-		raw_weight = (raw_weight >> 8);
-	}
-	message[7] = sht_humidity_processed; // humidity
-	message[8] = sht_temperature_processed[0]; // SHT temperature
-	message[9] = ds18b20_temperature_processed[0]; // DS18B20 temperature
-	message[10] = sfm10r1_temperature_processed[0]; // SFM10R1 temperature
-	message[11] = (sht_temperature_processed[1] << 4) | (ds18b20_temperature_processed[1] << 2) | sfm10r1_temperature_processed[1]; // SHT + DS18B20 + SFM10R1 temperatures
+	message[3] = raw_weight[0];
+	message[4] = raw_weight[1];
+	message[5] = raw_weight[2];
+	message[6] = sht_humidity_processed; // humidity
+	message[7] = sht_temperature_processed[0]; // SHT temperature
+	message[8] = ds18b20_temperature_processed[0]; // DS18B20 temperature
+	message[9] = sfm10r1_temperature_processed[0]; // SFM10R1 temperature
+	message[10] = (sht_temperature_processed[1] << 4) | (ds18b20_temperature_processed[1] << 2) | sfm10r1_temperature_processed[1]; // SHT + DS18B20 + SFM10R1 LSBs temperatures
+	message[11] = 0x00; // dummy in this case
 
 	/* convert message from HEX to ASCII HEX (0x1A -> '1' and 'A')*/
 	for (counter = 0; counter < 12; counter++) {
@@ -366,16 +379,22 @@ void clear_hourly_flags() {
 int main(void)
 {
 	
-	// test
-	serial_init(9600);
+	// for debug purpose only
+	/*serial_init(9600);
 	char data[8] = {'S', 'T', 'A', 'R', 'T', '\r', '\n', '\0'};
-	serial_send(data);
+	serial_send(data);*/
 	
 	init(); // launch and setup sequence
 	
 	measure_cycle(1); // do a test cycle and send data
 
 	while(1) {
+		// switch OFF peripherals before entering in sleep
+		power_off_external_peripherals();
+		
+		// enter in sleep mode, will wake up by RTC alarm interrupt
+		enter_sleep();
+		
 		// switch ON peripherals
 		power_on_external_peripherals();
 		
@@ -384,12 +403,6 @@ int main(void)
 		
 		// measure cycle and data transmit
 		measure_cycle(0);
-		
-		// switch OFF peripherals before entering in sleep
-		power_off_external_peripherals();
-		
-		// enter in sleep mode, will wake up by RTC alarm interrupt
-		enter_sleep();
 	}
 }
 

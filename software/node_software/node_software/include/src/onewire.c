@@ -23,7 +23,7 @@ void onewire_pin_release() {
 
 uint8_t onewire_pin_read() {
   /* read value of OneWire pin */
-  return ( (ONEWIRE_PIN >> ONEWIRE_BIT) & 1);
+  return ( (ONEWIRE_PIN >> ONEWIRE_BIT) & 0x01);
 }
 
 void onewire_init() {
@@ -33,7 +33,6 @@ void onewire_init() {
 
 uint8_t onewire_reset() {
   /* reset OneWire connection */
-  uint8_t data = 1;
 
   // low release
   onewire_pin_low();
@@ -41,9 +40,13 @@ uint8_t onewire_reset() {
   onewire_pin_release();
   _delay_us(70);
 
-  data = onewire_pin_read();
-  _delay_us(410);
-  return data; // 0 = device present
+ if (onewire_pin_read()) {
+	  return 0; // no device detected
+ }
+ else {
+	  _delay_us(410);
+	  return 1; // at least one device detected
+ }
 }
 
 void onewire_write(uint8_t data) {

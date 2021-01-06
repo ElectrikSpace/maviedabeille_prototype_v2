@@ -17,10 +17,10 @@ main.d main.o: .././main.c \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\math.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\include\string.h \
  c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\lib\gcc\avr\5.4.0\include\stddef.h \
+ ../include/header/simple_uart.h ../include/src/simple_uart.c \
  ../include/header/power.h ../include/src/power.c \
  ../include/header/hx711.h ../include/src/hx711.c \
  ../include/header/onewire.h ../include/src/onewire.c \
- ../include/header/simple_uart.h ../include/src/simple_uart.c \
  ../include/header/i2c_master.h ../include/src/i2c_master.c \
  ../include/header/ds3231.h ../include/src/ds3231.c \
  ../include/header/ds18b20.h ../include/src/ds18b20.c \
@@ -64,6 +64,10 @@ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\avr\
 
 c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\lib\gcc\avr\5.4.0\include\stddef.h:
 
+../include/header/simple_uart.h:
+
+../include/src/simple_uart.c:
+
 ../include/header/power.h:
 
 ../include/src/power.c:
@@ -75,10 +79,6 @@ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\avr8\avr8-gnu-toolchain\lib\
 ../include/header/onewire.h:
 
 ../include/src/onewire.c:
-
-../include/header/simple_uart.h:
-
-../include/src/simple_uart.c:
 
 ../include/header/i2c_master.h:
 

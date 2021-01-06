@@ -16,44 +16,48 @@ uint8_t ds18b20_setup(uint8_t binary_resolution) {
   uint8_t configuration_register;
   cli();
   onewire_init();
-  if (onewire_reset() != 0) {
+  if (onewire_reset()) {
     onewire_skip_rom();
     // prepare configuration register value
     switch (binary_resolution) {
       case 9 :
         configuration_register = 0;
+		success = 1;
         break;
       case 10 :
         configuration_register = (1<<5);
+		success = 1;
         break;
       case 11 :
         configuration_register = (1<<6);
+		success = 1;
         break;
       case 12 :
         configuration_register = (1<<5) | (1<<5);
+		success = 1;
         break;
       default :
         success = 0;
         break;
     }
-    if (success) {
-      // write in DS18B20 configuration register
-      onewire_write(DS18B20_WRITE_SCRATCHPAD);
-      onewire_write(0);
-      onewire_write(0);
-      onewire_write(configuration_register);
-      _delay_ms(1);
-      onewire_reset();
-      onewire_skip_rom();
-      onewire_write(DS18B20_READ_SCRATCHPAD);
-      onewire_read_bytes(9);
-      if (onewire_crc(9) == 0 && DataBytes[4] == configuration_register) {
-        success = 1;
-      }
-      else {
-        success = 0;
-      }
-    }
+	if (success) {
+		// write in DS18B20 configuration register
+		onewire_write(DS18B20_WRITE_SCRATCHPAD);
+		onewire_write(0);
+		onewire_write(0);
+		onewire_write(configuration_register);
+		_delay_ms(1);
+		onewire_reset();
+		onewire_skip_rom();
+		onewire_write(DS18B20_READ_SCRATCHPAD);
+		onewire_read_bytes(9);
+		if (onewire_crc(9) == 0 && DataBytes[4] == configuration_register) {
+			success = 1;
+		}
+		else {
+			success = 0;
+		}
+	}
   }
   else {
     success = 0;

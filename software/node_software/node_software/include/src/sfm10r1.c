@@ -167,20 +167,66 @@ uint8_t sfm10r1_send_data_downlink(char *data, uint8_t size, uint8_t *received_d
 
 uint8_t sfm10r1_get_temperature(float *temperature) {
   /* return 1 if success, put temperature in *temperature */
-  int16_t raw_temperature;
+  uint8_t uint_value;
+  uint8_t counter;
   char buffer[6] = {'A', 'T', '$', 'T', '?', '\r'};
 
   // send request
   software_uart_write_bytes(buffer, 6);
 
   // read answer
-  if (!software_uart_read_bytes(buffer, 4, SFM10R1_UART_TIMEOUT)) {
+  if (!software_uart_read_bytes(buffer, 5, SFM10R1_UART_TIMEOUT)) {
     return 0;
   }
 
   // process data
-  raw_temperature = buffer[0] + (buffer[1] << 8);
-  *temperature = (float) raw_temperature / 10;
+  *temperature = 0;
+  for (counter = 0; counter < 3; counter++) {
+	  switch (buffer[counter]) { // convert ASCII character into uint
+		case 0x30:
+			uint_value = 0;
+			break;
+		case 0x31:
+			uint_value = 1;
+			break;
+		case 0x32:
+			uint_value = 2;
+			break;
+		case 0x33:
+			uint_value = 3;
+			break;
+		case 0x34:
+			uint_value = 4;
+			break;
+		case 0x35:
+			uint_value = 5;
+			break;
+		case 0x36:
+			uint_value = 6;
+			break;
+		case 0x37:
+			uint_value = 7;
+			break;	
+		case 0x38:
+			uint_value = 8;
+			break;
+		case 0x39:
+			uint_value = 9;
+			break;
+		default:
+			// error
+			return 0;
+	  }
+	  if (counter == 0) {
+		  *temperature = *temperature + 10*((float) uint_value);
+	  }
+	  else if (counter == 1) {
+		  *temperature = *temperature + ((float) uint_value);
+	  }
+	  else { // counter == 2
+		  *temperature = *temperature + 0.1*((float) uint_value);
+	  }
+  }
 
   return 1;
 }
@@ -254,4 +300,26 @@ uint8_t sfm10r1_set_transmit_repeats(uint8_t number) {
     }
   }
   return 0;
+}
+
+uint8_t sfm10r1_save_config() {
+	/* save config register into flash memory of the chip, to keep change after reset or shutdown
+		return 1 if it is a success or 0 if it is a failure */
+	char buffer[6] = {'A', 'T', '$', 'W', 'R', '\r'};
+		
+	// send AT
+	software_uart_write_bytes(buffer, 6);
+
+	// read result and check if it is OK
+	if (software_uart_read_bytes(buffer, 4, SFM10R1_UART_TIMEOUT)) {
+		if (buffer[0] == 'O' && buffer[1] == 'K') {
+			return 1;
+		}
+		else {
+			return 0;
+		}
+	}
+	else {
+		return 0;
+	}
 }

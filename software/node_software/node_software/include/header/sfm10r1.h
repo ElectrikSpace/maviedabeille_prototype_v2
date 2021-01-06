@@ -30,5 +30,6 @@ extern uint8_t sfm10r1_get_temperature(float *temperature);
 extern uint8_t sfm10r1_get_voltage(float *voltage);
 extern uint8_t sfm10r1_get_transmit_repeats(uint8_t *repeats);
 extern uint8_t sfm10r1_set_transmit_repeats(uint8_t number);
+extern uint8_t sfm10r1_save_config();
 
 #endif
