@@ -6,3 +6,5 @@ This project contains :
 - the embedded software source code
 
 https://maviedabeille.snoiry.com/
+
+this project describes an old prototype
